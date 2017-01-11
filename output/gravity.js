@@ -92,6 +92,25 @@ var Data;
         return SimpleModel;
     }(RawModel));
     Data.SimpleModel = SimpleModel;
+    var Deny = (function () {
+        function Deny() {
+        }
+        Deny.getDeny = function () {
+            return [
+                "state",
+                "source",
+                "insertUrl",
+                "deleteUrl",
+                "updateUrl",
+                "findUrl",
+                "params",
+                "internalId",
+                "method"
+            ];
+        };
+        return Deny;
+    }());
+    Data.Deny = Deny;
 })(Data || (Data = {}));
 var Environment;
 (function (Environment) {
@@ -651,27 +670,31 @@ var Reflection;
                 return;
             }
             var output = '';
+            var attributes = new Array();
             for (var i in obj) {
                 var propName = i;
                 var propValue = obj[i];
                 var type = (typeof propValue);
+                var tempObj = {};
                 switch (type) {
+                    case 'function':
+                        break;
                     case 'object':
-                        console.log("refelction", propValue);
                         if (propValue instanceof Data.RawModel) {
-                            this.attributes.push({
-                                propName: this.getAtttributeAsObjects(propValue)
-                            });
+                            tempObj[propName] = this.getAtttributeAsObjects(propValue);
+                            attributes.push(tempObj);
                         }
                         break;
                     default:
-                        this.attributes.push({
-                            propName: propValue
-                        });
+                        var deny = Data.Deny.getDeny();
+                        if (deny.indexOf(propName) == -1) {
+                            tempObj[propName] = propValue;
+                            attributes.push(tempObj);
+                        }
                         break;
                 }
             }
-            return output;
+            return attributes;
         };
         /**
          *
@@ -943,7 +966,7 @@ var Em;
             if (url == null) {
                 url = this.getDi().get("url").getBaseUrl() +
                     objModel.getClassName() +
-                    "/find";
+                    "/findOne";
             }
             this.ajax.setUrl(url);
             this.ajax.setParams(params);
@@ -953,15 +976,22 @@ var Em;
         EntityManager.prototype.getResultSet = function (response, params, model) {
             var resultSet = new Array();
             var hydrator = new Hydrator.Hydrator;
-            var filters = new Criteria.Filters;
-            filters.buildCondition(params);
-            var data = filters.getMultipleRowValues(response);
-            for (var key in data) {
-                var newModel = hydrator.hydrate(model, data[key]);
-                resultSet.push(newModel);
+            var data = JSON.parse(response);
+            if (Array.isArray(data)) {
+                for (var key in response) {
+                    var newModel = hydrator.hydrate(model, data[key]);
+                    resultSet.push(newModel);
+                }
+                if (resultSet.length == 0) {
+                    resultSet = false;
+                }
             }
-            if (resultSet.length == 0) {
-                resultSet = false;
+            else {
+                var newModel = hydrator.hydrate(model, data);
+                resultSet = newModel;
+                if (resultSet.length == 0) {
+                    resultSet = false;
+                }
             }
             return resultSet;
         };
@@ -975,12 +1005,13 @@ var Em;
             this.getContainer()
                 .set("transactionObjectModel", model);
             this.ajax.setContainer("transactionType", "save");
+            var modelName = model.getClassName();
             switch (model.state) {
                 case UnitOfWork.UnitOfWork.NEW:
                     var url = model.getInsertUrl();
                     if (url == null) {
                         url = this.getDi().get("url").getBaseUrl() +
-                            model.getClassName() +
+                            modelName +
                             "/insert";
                     }
                     this.ajax.setUrl(url);
@@ -989,15 +1020,17 @@ var Em;
                     var url = model.getUpdateUrl();
                     if (url == null) {
                         url = this.getDi().get("url").getBaseUrl() +
-                            model.getClassName() +
+                            modelName +
                             "/update";
                     }
                     this.ajax.setUrl(url);
                     break;
             }
             var reflection = new Reflection.Reflection();
-            console.log("save.reflect", reflection.getAtttributeAsObjects(model));
-            this.ajax.setParams(model.getParams());
+            var attrsAsString = JSON.stringify(reflection.getAtttributeAsObjects(model));
+            var objParams = {};
+            objParams[modelName] = attrsAsString;
+            this.ajax.setParams(objParams);
             this.ajax.setMethod(model.getMethod());
             return this;
         };
@@ -1018,7 +1051,6 @@ var Em;
                 var params = this.getContainer()
                     .get("transactionParams");
             }
-            var fn = fn;
             this.ajax.response(function (response) {
                 var resultSet = new Array();
                 switch (type) {
@@ -1035,7 +1067,7 @@ var Em;
                         resultSet = response;
                         break;
                 }
-                fn(resultSet).bind(this);
+                fn(resultSet);
             }.bind(this));
             this.ajax.send();
             return this;

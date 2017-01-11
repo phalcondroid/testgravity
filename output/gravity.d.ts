@@ -34,6 +34,9 @@ declare namespace Data {
     }
     class SimpleModel extends RawModel {
     }
+    class Deny {
+        static getDeny(): string[];
+    }
     interface ModelInterface {
         insertUrl: string;
         deleteUrl: string;
@@ -240,7 +243,7 @@ declare namespace Reflection {
         private attributes;
         constructor();
         read(obj: any): string;
-        getAtttributeAsObjects(obj: any): string;
+        getAtttributeAsObjects(obj: any): any[];
         /**
          *
          */

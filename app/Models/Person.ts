@@ -11,9 +11,6 @@ export class Person extends Data.ModelAjax
 
     public initialize()
     {
-        this.setFindUrl("http://localhost/json.php");
-        this.setInsertUrl("http://localhost/insert.php");
-        this.setUpdateUrl("http://localhost/update.php");
     }
 
     public setId(id : number)

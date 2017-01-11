@@ -26,9 +26,6 @@ System.register(["./Game"], function (exports_1, context_1) {
                     return _this;
                 }
                 Person.prototype.initialize = function () {
-                    this.setFindUrl("http://localhost/json.php");
-                    this.setInsertUrl("http://localhost/insert.php");
-                    this.setUpdateUrl("http://localhost/update.php");
                 };
                 Person.prototype.setId = function (id) {
                     this.id = id;
