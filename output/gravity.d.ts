@@ -52,6 +52,27 @@ declare namespace Data {
         getDeleteUrl(): string;
     }
 }
+declare namespace Environment {
+    class Config {
+        private config;
+        /**
+         *
+         */
+        setConfig(config: Object, env?: number): void;
+        /**
+         *
+         */
+        getConfig(env?: number): Object;
+    }
+    class Scope {
+        static LOCAL: number;
+        static DEV: number;
+        static TEST: number;
+        static QA: number;
+        static STAGING: number;
+        static PRODUCTION: number;
+    }
+}
 declare namespace Errors {
     class Message {
         static NOT_VALID_ARRAY: string;
@@ -73,14 +94,34 @@ declare namespace Gravity {
     class Application {
         private controllers;
         private loader;
+        private config;
+        private env;
+        constructor();
+        setScope(env: number): void;
         /**
          *
          */
-        load(loader: any): void;
+        setLoader(loader: any): void;
+        /**
+         *
+         */
+        resolveLoader(di: any): void;
         /**
          *
          */
         setControllers(controllers: any[]): void;
+        /**
+         *
+         */
+        resolveControllers(di: any): void;
+        /**
+         *
+         */
+        setConfig(config: Object): void;
+        /**
+         *
+         */
+        resolveConfig(di: any): void;
         /**
          *
          */
@@ -197,8 +238,17 @@ declare namespace Reflection {
         private classToReflect;
         private methods;
         private attributes;
-        constructor(classToReflect: any);
+        constructor();
         read(obj: any): string;
+        getAtttributeAsObjects(obj: any): string;
+        /**
+         *
+         */
+        getMethods(): any[];
+        /**
+         *
+         */
+        getAttributes(): any[];
     }
 }
 declare namespace Hydrator {
@@ -390,6 +440,15 @@ declare namespace Logic {
     }
 }
 declare namespace Eval {
+}
+declare namespace Url {
+    class Url {
+        private baseUrl;
+        constructor(base?: string);
+        get(opt1: string): string;
+        setBaseUrl(url: string): void;
+        getBaseUrl(): string;
+    }
 }
 /**
  * [Html description]

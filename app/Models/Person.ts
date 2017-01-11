@@ -7,7 +7,7 @@ export class Person extends Data.ModelAjax
     private id      : number = 0;
     private name    : string = "";
     private last    : string = "";
-    private game    : Function = Game;
+    private game    : any = Game;
 
     public initialize()
     {
@@ -46,7 +46,7 @@ export class Person extends Data.ModelAjax
         return this.last;
     }
 
-    public setGame(game : Function)
+    public setGame(game : any)
     {
         this.game = game;
     }

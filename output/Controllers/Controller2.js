@@ -30,11 +30,23 @@ System.register(["../Models/Person"], function (exports_1, context_1) {
                     em.findOne(Person_1.Person, {
                         "name": "name six"
                     }).response(function (person) {
-                        console.log("el six", person.getName());
+                        console.log("el six", person.getGame().getGame());
                         em.save(person)
                             .response(function (response) {
                             console.log(response);
                         });
+                    });
+                    em.find(Person_1.Person, {
+                        "name": "name uno"
+                    }).response(function (data) {
+                        for (var key in data) {
+                            console.log("name uno", data[key].getName());
+                        }
+                    });
+                    em.findOne(Person_1.Person, {
+                        "name": "name seven"
+                    }).response(function (myModel) {
+                        console.log("seven", myModel.getName());
                     });
                 };
                 return Controller2;

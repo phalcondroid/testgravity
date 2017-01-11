@@ -26,12 +26,16 @@ var Data;
         __extends(ModelAjax, _super);
         function ModelAjax() {
             var _this = _super.call(this) || this;
+            _this.insertUrl = null;
+            _this.deleteUrl = null;
+            _this.updateUrl = null;
+            _this.findUrl = null;
             _this.method = "POST";
             _this.initialize();
             return _this;
         }
         ModelAjax.prototype.setSource = function (data) {
-            this.setInsertUrl(data.insert);
+            this.setInsertUrl(data.find);
             this.setUpdateUrl(data.update);
             this.setInsertUrl(data.insert);
             this.setFindUrl(data.insert);
@@ -89,6 +93,42 @@ var Data;
     }(RawModel));
     Data.SimpleModel = SimpleModel;
 })(Data || (Data = {}));
+var Environment;
+(function (Environment) {
+    var Config = (function () {
+        function Config() {
+            this.config = {};
+        }
+        /**
+         *
+         */
+        Config.prototype.setConfig = function (config, env) {
+            if (env === void 0) { env = Scope.LOCAL; }
+            this.config[env] = config;
+        };
+        /**
+         *
+         */
+        Config.prototype.getConfig = function (env) {
+            if (env === void 0) { env = Scope.LOCAL; }
+            return this.config[env];
+        };
+        return Config;
+    }());
+    Environment.Config = Config;
+    var Scope = (function () {
+        function Scope() {
+        }
+        return Scope;
+    }());
+    Scope.LOCAL = 0;
+    Scope.DEV = 1;
+    Scope.TEST = 2;
+    Scope.QA = 3;
+    Scope.STAGING = 4;
+    Scope.PRODUCTION = 5;
+    Environment.Scope = Scope;
+})(Environment || (Environment = {}));
 var Errors;
 (function (Errors) {
     var Message = (function () {
@@ -130,18 +170,34 @@ var Events;
     }());
     Events.Manager = Manager;
 })(Events || (Events = {}));
+///<reference path="./Environment/Environment"/>
 var Gravity;
+///<reference path="./Environment/Environment"/>
 (function (Gravity) {
     var Application = (function () {
         function Application() {
             this.controllers = new Array;
             this.loader = null;
+            this.config = null;
+            this.env = Environment.Scope.LOCAL;
         }
+        Application.prototype.setScope = function (env) {
+            this.env = env;
+        };
         /**
          *
          */
-        Application.prototype.load = function (loader) {
+        Application.prototype.setLoader = function (loader) {
             this.loader = loader;
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveLoader = function (di) {
+            if (this.loader != null) {
+                var loader = new this.loader();
+                loader.initialize(di);
+            }
         };
         /**
          *
@@ -152,17 +208,12 @@ var Gravity;
         /**
          *
          */
-        Application.prototype.start = function () {
-            var di = new Service.FactoryDefault;
-            var i = 1;
-            var executed = new Array();
-            if (this.loader != null) {
-                var loader = new this.loader();
-                loader.initialize(di);
-            }
+        Application.prototype.resolveControllers = function (di) {
             if (this.controllers.length == 0) {
                 throw "You must load your controllers";
             }
+            var i = 1;
+            var executed = new Array();
             for (var key in this.controllers) {
                 var temp = new this.controllers[key];
                 if (temp instanceof Logic.Controller) {
@@ -176,6 +227,37 @@ var Gravity;
                 }
                 i++;
             }
+        };
+        /**
+         *
+         */
+        Application.prototype.setConfig = function (config) {
+            this.config = config;
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveConfig = function (di) {
+            if (this.config) {
+                for (var key in this.config) {
+                    var url = new Url.Url();
+                    switch (key) {
+                        case "baseUrl":
+                            url.setBaseUrl(this.config[key]);
+                            break;
+                    }
+                    di.set("url", url);
+                }
+            }
+        };
+        /**
+         *
+         */
+        Application.prototype.start = function () {
+            var di = new Service.FactoryDefault;
+            this.resolveConfig(di);
+            this.resolveLoader(di);
+            this.resolveControllers(di);
         };
         return Application;
     }());
@@ -531,11 +613,9 @@ var UnitOfWork;
 var Reflection;
 (function (Reflection_1) {
     var Reflection = (function () {
-        function Reflection(classToReflect) {
+        function Reflection() {
             this.methods = new Array();
             this.attributes = new Array();
-            this.classToReflect = classToReflect;
-            console.log(this.read(this.classToReflect));
         }
         Reflection.prototype.read = function (obj) {
             if (typeof obj !== 'object') {
@@ -550,16 +630,60 @@ var Reflection;
                 switch (type) {
                     case 'function':
                         output += ' [method] ' + propName + '\n\n';
+                        this.methods.push();
                         break;
                     case 'object':
                         output += '\t[object] ' + propName + ' ' + this.read(propValue) + '\n\n';
                         break;
                     default:
                         output += ' [property] ' + propName + ' ' + propValue + '\n\n';
+                        this.attributes.push({
+                            propName: propValue
+                        });
                         break;
                 }
             }
             return output;
+        };
+        Reflection.prototype.getAtttributeAsObjects = function (obj) {
+            if (typeof obj !== 'object') {
+                console.log('Not an object');
+                return;
+            }
+            var output = '';
+            for (var i in obj) {
+                var propName = i;
+                var propValue = obj[i];
+                var type = (typeof propValue);
+                switch (type) {
+                    case 'object':
+                        console.log("refelction", propValue);
+                        if (propValue instanceof Data.RawModel) {
+                            this.attributes.push({
+                                propName: this.getAtttributeAsObjects(propValue)
+                            });
+                        }
+                        break;
+                    default:
+                        this.attributes.push({
+                            propName: propValue
+                        });
+                        break;
+                }
+            }
+            return output;
+        };
+        /**
+         *
+         */
+        Reflection.prototype.getMethods = function () {
+            return this.methods;
+        };
+        /**
+         *
+         */
+        Reflection.prototype.getAttributes = function () {
+            return this.attributes;
         };
         return Reflection;
     }());
@@ -606,7 +730,7 @@ var Network;
          *
          */
         function Ajax() {
-            this.method = "GET";
+            this.method = "POST";
             this.parameters = "";
             this.container = [];
             this.responseFn = function () { };
@@ -750,12 +874,14 @@ var Network;
     }());
     Network.Ajax = Ajax;
 })(Network || (Network = {}));
+/// <reference path="../Reflection/Reflection" />
 /// <reference path="./UnitOfWork" />
 /// <reference path="../Network/Network" />
 /// <reference path="../Data/Data" />
 /// <reference path="./Criteria" />
 /// <reference path="./Hydrator" />
 var Em;
+/// <reference path="../Reflection/Reflection" />
 /// <reference path="./UnitOfWork" />
 /// <reference path="../Network/Network" />
 /// <reference path="../Data/Data" />
@@ -767,7 +893,6 @@ var Em;
             this.container = null;
             this.ajax = null;
             this.hydrator = null;
-            this.fnResponse = new Array;
             this.uow = new UnitOfWork.UnitOfWork;
         }
         /**
@@ -791,8 +916,14 @@ var Em;
                 .set("transactionParams", params);
             this.ajax.setContainer("transactionType", "find");
             var objModel = new model();
-            this.ajax.setUrl(objModel.getFindUrl());
-            this.ajax.setParams(objModel.getParams());
+            var url = objModel.getFindUrl();
+            if (url == null) {
+                url = this.getDi().get("url").getBaseUrl() +
+                    objModel.getClassName() +
+                    "/find";
+            }
+            this.ajax.setUrl(url);
+            this.ajax.setParams(params);
             this.ajax.setMethod(objModel.getMethod());
             return this;
         };
@@ -808,8 +939,14 @@ var Em;
                 .set("transactionParams", params);
             this.ajax.setContainer("transactionType", "findOne");
             var objModel = new model();
-            this.ajax.setUrl(objModel.getFindUrl());
-            this.ajax.setParams(objModel.getParams());
+            var url = objModel.getFindUrl();
+            if (url == null) {
+                url = this.getDi().get("url").getBaseUrl() +
+                    objModel.getClassName() +
+                    "/find";
+            }
+            this.ajax.setUrl(url);
+            this.ajax.setParams(params);
             this.ajax.setMethod(objModel.getMethod());
             return this;
         };
@@ -840,12 +977,26 @@ var Em;
             this.ajax.setContainer("transactionType", "save");
             switch (model.state) {
                 case UnitOfWork.UnitOfWork.NEW:
-                    this.ajax.setUrl(model.getInsertUrl());
+                    var url = model.getInsertUrl();
+                    if (url == null) {
+                        url = this.getDi().get("url").getBaseUrl() +
+                            model.getClassName() +
+                            "/insert";
+                    }
+                    this.ajax.setUrl(url);
                     break;
                 case UnitOfWork.UnitOfWork.CREATED:
-                    this.ajax.setUrl(model.getUpdateUrl());
+                    var url = model.getUpdateUrl();
+                    if (url == null) {
+                        url = this.getDi().get("url").getBaseUrl() +
+                            model.getClassName() +
+                            "/update";
+                    }
+                    this.ajax.setUrl(url);
                     break;
             }
+            var reflection = new Reflection.Reflection();
+            console.log("save.reflect", reflection.getAtttributeAsObjects(model));
             this.ajax.setParams(model.getParams());
             this.ajax.setMethod(model.getMethod());
             return this;
@@ -867,6 +1018,7 @@ var Em;
                 var params = this.getContainer()
                     .get("transactionParams");
             }
+            var fn = fn;
             this.ajax.response(function (response) {
                 var resultSet = new Array();
                 switch (type) {
@@ -883,7 +1035,7 @@ var Em;
                         resultSet = response;
                         break;
                 }
-                fn(resultSet);
+                fn(resultSet).bind(this);
             }.bind(this));
             this.ajax.send();
             return this;
@@ -1018,6 +1170,26 @@ var Logic;
     }());
     Logic.Controller = Controller;
 })(Logic || (Logic = {}));
+var Url;
+(function (Url_1) {
+    var Url = (function () {
+        function Url(base) {
+            if (base === void 0) { base = ""; }
+            this.setBaseUrl(base);
+        }
+        Url.prototype.get = function (opt1) {
+            return this.baseUrl + opt1;
+        };
+        Url.prototype.setBaseUrl = function (url) {
+            this.baseUrl = url;
+        };
+        Url.prototype.getBaseUrl = function () {
+            return this.baseUrl;
+        };
+        return Url;
+    }());
+    Url_1.Url = Url;
+})(Url || (Url = {}));
 /// <reference path="../Helper/Helper" />
 /// <reference path="../Network/Network" />
 /**

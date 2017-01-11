@@ -1,4 +1,3 @@
-///<reference path="../../output/gravity.d.ts"/>
 System.register(["../Models/Person", "../Models/Game"], function (exports_1, context_1) {
     "use strict";
     var __extends = (this && this.__extends) || function (d, b) {
@@ -17,7 +16,7 @@ System.register(["../Models/Person", "../Models/Game"], function (exports_1, con
                 Game_1 = Game_1_1;
             }
         ],
-        execute: function () {///<reference path="../../output/gravity.d.ts"/>
+        execute: function () {
             Controller = (function (_super) {
                 __extends(Controller, _super);
                 function Controller() {
