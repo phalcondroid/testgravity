@@ -1,5 +1,16 @@
 ///<reference path="../../output/gravity.d.ts"/>
 
+import { Services }          from "./Services";
+
+//Controllers
+import { ExampleController } from "../Controllers/ExampleController";
+import { OtherController }   from "../Controllers/OtherController";
+
+//Views
+import { ExampleView } from "../Views/Example/ExampleView";
+import { HelperView  } from "../Views/Example/HelperView";
+import { OtherView  }  from "../Views/Other/OtherView";
+
 export class AppConfig
 {
     public static getConfig() : Object
@@ -8,44 +19,25 @@ export class AppConfig
 
         config.setConfig(
             {
-                "baseUrl" : "http://localhost/testgravity/"
+                "baseUrl"     : "http://localhost/testgravity/",
+                "controllers" : [
+                    {
+                        "name"  : ExampleController,
+                        "views" : [
+                            ExampleView,
+                            HelperView
+                        ]
+                    },
+                    {
+                        "name"  : OtherController,
+                        "views" : [
+                            OtherView
+                        ]
+                    }
+                ],
+                "services"    : Services
             },
             Environment.Scope.LOCAL
-        );
-
-        config.setConfig(
-            {
-                "baseUrl" : "https://development/testgravity/api/"
-            },
-            Environment.Scope.DEV
-        );
-
-        config.setConfig(
-            {
-                "baseUrl" : ""
-            },
-            Environment.Scope.TEST
-        );
-
-        config.setConfig(
-            {
-                "baseUrl" : ""
-            },
-            Environment.Scope.QA
-        );
-
-        config.setConfig(
-            {
-                "baseUrl" : ""
-            },
-            Environment.Scope.STAGING
-        );
-
-        config.setConfig(
-            {
-                "baseUrl" : ""
-            },
-            Environment.Scope.PRODUCTION
         );
 
         return config;

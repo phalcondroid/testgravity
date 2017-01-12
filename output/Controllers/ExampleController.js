@@ -1,3 +1,4 @@
+///<reference path="../../output/gravity.d.ts"/>
 System.register(["../Models/Person", "../Models/Game"], function (exports_1, context_1) {
     "use strict";
     var __extends = (this && this.__extends) || function (d, b) {
@@ -6,7 +7,7 @@ System.register(["../Models/Person", "../Models/Game"], function (exports_1, con
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
     var __moduleName = context_1 && context_1.id;
-    var Person_1, Game_1, Controller;
+    var Person_1, Game_1, ExampleController;
     return {
         setters: [
             function (Person_1_1) {
@@ -16,13 +17,13 @@ System.register(["../Models/Person", "../Models/Game"], function (exports_1, con
                 Game_1 = Game_1_1;
             }
         ],
-        execute: function () {
-            Controller = (function (_super) {
-                __extends(Controller, _super);
-                function Controller() {
+        execute: function () {///<reference path="../../output/gravity.d.ts"/>
+            ExampleController = (function (_super) {
+                __extends(ExampleController, _super);
+                function ExampleController() {
                     return _super.apply(this, arguments) || this;
                 }
-                Controller.prototype.initialize = function () {
+                ExampleController.prototype.initialize = function () {
                     var em = this.getDi().get("em");
                     var game = new Game_1.Game();
                     game.setGame("nuevo game");
@@ -42,9 +43,9 @@ System.register(["../Models/Person", "../Models/Game"], function (exports_1, con
                         }
                     });
                 };
-                return Controller;
+                return ExampleController;
             }(Logic.Controller));
-            exports_1("Controller", Controller);
+            exports_1("ExampleController", ExampleController);
         }
     };
 });

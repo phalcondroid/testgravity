@@ -262,7 +262,8 @@ declare namespace Hydrator {
     }
 }
 declare namespace Network {
-    class Ajax {
+    class Ajax implements Service.InjectionAwareInterface {
+        di: Service.Container;
         private httpRequest;
         private method;
         private parameters;
@@ -328,6 +329,14 @@ declare namespace Network {
          *
          */
         send(fn?: any): void;
+        /**
+         *
+         */
+        setDi(di: Service.Container): void;
+        /**
+         *
+         */
+        getDi(): Service.Container;
     }
 }
 declare namespace Em {
@@ -494,6 +503,18 @@ declare namespace Html {
         /**
          *
          */
+        byId(id: string): this;
+        /**
+         *
+         */
+        byTag(name: string): this;
+        /**
+         *
+         */
+        byClass(name: string): this;
+        /**
+         *
+         */
         create(tag: string): this;
         /**
          * Create html component like jquery object
@@ -576,6 +597,10 @@ declare namespace Html {
          * @return this
          */
         append(append: any): this;
+        /**
+         *
+         */
+        private checkAppendValue(append);
         /**
          * [html description]
          * @param  {[type]} html [description]
@@ -1338,5 +1363,8 @@ declare namespace Html {
 declare namespace View {
     class Component {
         constructor();
+        initialize(): void;
+    }
+    class Model {
     }
 }

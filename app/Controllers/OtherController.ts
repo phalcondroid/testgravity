@@ -3,7 +3,7 @@
 import { Person } from "../Models/Person";
 import { Game } from "../Models/Game";
 
-export class Controller2 extends Logic.Controller
+export class OtherController extends Logic.Controller
 {
     public initialize()
     {

@@ -469,48 +469,50 @@ var Criteria;
             var index = 1;
             var length = Object.keys(params).length;
             for (var key in params) {
-                if (key == Operator.CONDITIONAL) {
-                    var conditional = params[key];
-                    for (var keyConditional in conditional) {
-                        switch (keyConditional) {
-                            case Operator.AND:
-                                var iAnd = 1;
-                                var andContent = conditional[keyConditional];
-                                var andLength = Object.keys(andContent).length;
-                                for (var keyAnd in andContent) {
-                                    this.getExpression(keyAnd, andContent[keyAnd], Native.AND, iAnd, andLength);
-                                    iAnd++;
-                                }
-                                break;
-                            case Operator.OR:
-                                var iOr = 1;
-                                var orContent = conditional[keyConditional];
-                                var orLength = Object.keys(orContent).length;
-                                for (var keyOr in orContent) {
-                                    this.getExpression(keyOr, orContent[keyOr], Native.OR, iOr, orLength);
-                                    iOr++;
-                                }
-                                break;
-                            case Operator.SORT:
-                                this.getSort(conditional[keyConditional]);
-                                break;
-                            case Operator.LIMIT:
-                                this.getLimit(conditional[keyConditional]);
-                                break;
-                            case Operator.COLUMNS:
-                                this.columns = conditional[keyConditional];
-                                if (typeof conditional[keyConditional] != "object") {
-                                    throw Errors.Message.getCodeMessage(Errors.MessageCode.NOT_VALID_OBJECT, "$columns option");
-                                }
-                                break;
-                            default:
-                                break;
+                switch (key) {
+                    case Operator.CONDITIONAL:
+                        var conditional = params[key];
+                        for (var keyConditional in conditional) {
+                            switch (keyConditional) {
+                                case Operator.AND:
+                                    var iAnd = 1;
+                                    var andContent = conditional[keyConditional];
+                                    var andLength = Object.keys(andContent).length;
+                                    for (var keyAnd in andContent) {
+                                        this.getExpression(keyAnd, andContent[keyAnd], Native.AND, iAnd, andLength);
+                                        iAnd++;
+                                    }
+                                    break;
+                                case Operator.OR:
+                                    var iOr = 1;
+                                    var orContent = conditional[keyConditional];
+                                    var orLength = Object.keys(orContent).length;
+                                    for (var keyOr in orContent) {
+                                        this.getExpression(keyOr, orContent[keyOr], Native.OR, iOr, orLength);
+                                        iOr++;
+                                    }
+                                    break;
+                                default:
+                                    break;
+                            }
                         }
-                    }
-                }
-                else {
-                    this.getExpression(key, params[key], Native.AND, index, length);
-                    index++;
+                        break;
+                    case Operator.SORT:
+                        this.getSort(params[key]);
+                        break;
+                    case Operator.LIMIT:
+                        this.getLimit(params[key]);
+                        break;
+                    case Operator.COLUMNS:
+                        this.columns = params[key];
+                        if (typeof params[key] != "object") {
+                            throw Errors.Message.getCodeMessage(Errors.MessageCode.NOT_VALID_OBJECT, "$columns option");
+                        }
+                        break;
+                    default:
+                        this.getExpression(key, params[key], Native.AND, index, length);
+                        index++;
+                        break;
                 }
             }
         };
@@ -592,22 +594,32 @@ var Criteria;
             if (this.first == "") {
                 this.first = "true";
             }
-            var conditions = this.first;
             var data = new Array();
-            var evalValue = "if (" + conditions + ") { data.push(this.getColumns(row)); }";
-            for (var key in response) {
-                var row = response[key];
-                eval(evalValue);
-            }
-            if (this.sort.length > 0) {
-                var i = 0;
-                for (var key in this.sort) {
-                    eval(this.sort[key]);
-                    i++;
+            if (Array.isArray(response)) {
+                var conditions = this.first;
+                var evalValue = "if (" + conditions + ") { data.push(this.getColumns(row)); }";
+                for (var key in response) {
+                    var row = response[key];
+                    eval(evalValue);
+                }
+                if (this.sort.length > 0) {
+                    var i = 0;
+                    for (var key in this.sort) {
+                        eval(this.sort[key]);
+                        i++;
+                    }
+                }
+                if (this.limit != null) {
+                    eval(this.limit);
                 }
             }
-            if (this.limit != null) {
-                eval(this.limit);
+            else {
+                if (typeof response == "object") {
+                    data.push(this.getColumns(response));
+                }
+                else {
+                    console.log("Response is not an object");
+                }
             }
             return data;
         };
@@ -893,6 +905,18 @@ var Network;
             this.setHeaders();
             this.httpRequest.send(this.parameters);
         };
+        /**
+         *
+         */
+        Ajax.prototype.setDi = function (di) {
+            this.di = di;
+        };
+        /**
+         *
+         */
+        Ajax.prototype.getDi = function () {
+            return this.di;
+        };
         return Ajax;
     }());
     Network.Ajax = Ajax;
@@ -933,6 +957,7 @@ var Em;
         EntityManager.prototype.find = function (model, params) {
             if (params === void 0) { params = {}; }
             this.ajax = new Network.Ajax();
+            this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
@@ -956,6 +981,7 @@ var Em;
         EntityManager.prototype.findOne = function (model, params) {
             if (params === void 0) { params = {}; }
             this.ajax = new Network.Ajax();
+            this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
@@ -976,22 +1002,15 @@ var Em;
         EntityManager.prototype.getResultSet = function (response, params, model) {
             var resultSet = new Array();
             var hydrator = new Hydrator.Hydrator;
-            var data = JSON.parse(response);
-            if (Array.isArray(data)) {
-                for (var key in response) {
-                    var newModel = hydrator.hydrate(model, data[key]);
-                    resultSet.push(newModel);
-                }
-                if (resultSet.length == 0) {
-                    resultSet = false;
-                }
+            var filters = new Criteria.Filters;
+            filters.buildCondition(params);
+            var data = filters.getMultipleRowValues(response);
+            for (var key in data) {
+                var newModel = hydrator.hydrate(model, data[key]);
+                resultSet.push(newModel);
             }
-            else {
-                var newModel = hydrator.hydrate(model, data);
-                resultSet = newModel;
-                if (resultSet.length == 0) {
-                    resultSet = false;
-                }
+            if (resultSet.length == 0) {
+                resultSet = false;
             }
             return resultSet;
         };
@@ -1000,6 +1019,7 @@ var Em;
          */
         EntityManager.prototype.save = function (model) {
             this.ajax = new Network.Ajax();
+            this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
@@ -1067,7 +1087,7 @@ var Em;
                         resultSet = response;
                         break;
                 }
-                fn(resultSet);
+                return fn(resultSet);
             }.bind(this));
             this.ajax.send();
             return this;
@@ -1271,6 +1291,27 @@ var Html;
         /**
          *
          */
+        HtmlElement.prototype.byId = function (id) {
+            this.element = document.getElementById(id);
+            return this;
+        };
+        /**
+         *
+         */
+        HtmlElement.prototype.byTag = function (name) {
+            this.element = document.getElementsByTagName(name);
+            return this;
+        };
+        /**
+         *
+         */
+        HtmlElement.prototype.byClass = function (name) {
+            this.element = document.getElementsByClassName(name);
+            return this;
+        };
+        /**
+         *
+         */
         HtmlElement.prototype.create = function (tag) {
             this.element = this.init(tag, this.id);
             return this;
@@ -1415,18 +1456,37 @@ var Html;
         HtmlElement.prototype.append = function (append) {
             if (Array.isArray(append)) {
                 for (var key in append) {
-                    this.element.appendChild(append[key]);
+                    this.checkAppendValue(append[key]);
                 }
             }
             else {
-                if (typeof append != "object") {
-                    this.element.appendChild(append);
-                }
-                else {
-                    this.element.appendChild(append);
-                }
+                this.checkAppendValue(append);
             }
             return this;
+        };
+        /**
+         *
+         */
+        HtmlElement.prototype.checkAppendValue = function (append) {
+            switch (typeof append) {
+                case "string":
+                    this.element.appendChild(document.createTextNode(append));
+                    break;
+                case "number":
+                    this.element.appendChild(document.createTextNode(append.toString()));
+                    break;
+                case "object":
+                    if (append instanceof Html.HtmlElement) {
+                        this.element.appendChild(append.getElement());
+                    }
+                    else {
+                        this.element.appendChild(append);
+                    }
+                    break;
+                default:
+                    this.element.appendChild(append);
+                    break;
+            }
         };
         /**
          * [html description]
@@ -1435,12 +1495,12 @@ var Html;
          */
         HtmlElement.prototype.html = function (html) {
             if (html === void 0) { html = null; }
-            if (html) {
-                this.element.innerHtml = html;
+            if (html != null) {
+                this.getElement().innerHTML = html;
                 return this;
             }
             else {
-                return this.element.innerHtml;
+                return this.element.innerHTML;
             }
         };
         /**
@@ -2799,7 +2859,7 @@ var Html;
                     header[j] = row;
                     var trIdentify2 = Helper.StringHelper.sanitizeString(key) + Helper.StringHelper.sanitizeString(row) + this.id;
                     var td = new Html.Td("TbodyTd" + trIdentify2);
-                    if (this.validateSystemKeys(row)) {
+                    if (!this.validateSystemKeys(row)) {
                         var contentRow = content[key][row];
                         var finalContent;
                         if (contentRow instanceof Html.HtmlElement) {
@@ -2834,9 +2894,7 @@ var Html;
                         td.append([
                             finalContent
                         ]);
-                        tr.append([
-                            td.getElement()
-                        ]);
+                        tr.append(td);
                     }
                     if (typeof this.fnCContent === "function") {
                         this.fnCContent(td, j, content[key][row], row);
@@ -2846,17 +2904,13 @@ var Html;
                     }
                     j++;
                 }
-                this.tbody.append([
-                    tr.getElement()
-                ]);
+                this.tbody.append(tr);
                 i++;
             }
             if (this.header === false) {
                 this.setHeader(header);
             }
-            this.append([
-                this.tbody.getElement()
-            ]);
+            this.append(this.tbody);
             return this;
         };
         /**
@@ -3121,8 +3175,17 @@ var View;
 (function (View) {
     var Component = (function () {
         function Component() {
+            this.initialize();
         }
+        Component.prototype.initialize = function () {
+        };
         return Component;
     }());
     View.Component = Component;
+    var Model = (function () {
+        function Model() {
+        }
+        return Model;
+    }());
+    View.Model = Model;
 })(View || (View = {}));

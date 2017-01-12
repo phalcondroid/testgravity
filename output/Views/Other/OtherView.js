@@ -6,21 +6,22 @@ System.register([], function (exports_1, context_1) {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
     var __moduleName = context_1 && context_1.id;
-    var Body;
+    var OtherView;
     return {
         setters: [],
         execute: function () {
-            Body = (function (_super) {
-                __extends(Body, _super);
-                function Body() {
-                    var _this = _super.call(this) || this;
+            OtherView = (function (_super) {
+                __extends(OtherView, _super);
+                function OtherView() {
+                    return _super.apply(this, arguments) || this;
+                }
+                OtherView.prototype.initialize = function () {
                     var div = new Html.Div();
                     div.attr("class", "btn");
-                    return _this;
-                }
-                return Body;
+                };
+                return OtherView;
             }(View.Component));
-            exports_1("Body", Body);
+            exports_1("OtherView", OtherView);
         }
     };
 });
