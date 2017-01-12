@@ -27,15 +27,16 @@ System.register(["../Models/Person", "../Models/Game"], function (exports_1, con
                     var em = this.getDi().get("em");
                     var game = new Game_1.Game();
                     game.setGame("nuevo game");
+                    this.setVar("fromController", "test value");
                     var person = new Person_1.Person();
                     person.setName("name nuevo");
                     person.setLast("last nuevo");
                     person.setGame(game);
-                    em.save(person)
+                    em.save(this, person)
                         .response(function (response) {
                         console.log(response);
                     });
-                    em.find(Person_1.Person, {
+                    em.find(this, Person_1.Person, {
                         "name": "name one"
                     }).response(function (data) {
                         for (var key in data) {

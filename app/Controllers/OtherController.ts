@@ -10,12 +10,12 @@ export class OtherController extends Logic.Controller
         var person = new Person();
         var em = this.getDi().get("em");
 
-        em.save(person)
+        em.save(this, person)
         .response(function (response) {
             console.log(response);
         });
 
-        em.findOne(Person, {
+        em.findOne(this, Person, {
             "name" : "name six"
         }).response(function (person) {
             console.log(
@@ -28,7 +28,7 @@ export class OtherController extends Logic.Controller
             });
         });
 
-        em.find(Person, {
+        em.find(this, Person, {
             "name" : "name uno"
         }).response(function (data) {
             for (var key in data) {
@@ -39,7 +39,7 @@ export class OtherController extends Logic.Controller
             }
         });
 
-        em.findOne(Person, {
+        em.findOne(this, Person, {
             "name" : "name seven"
         }).response(function (myModel) {
             console.log(

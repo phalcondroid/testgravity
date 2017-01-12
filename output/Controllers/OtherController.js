@@ -23,11 +23,11 @@ System.register(["../Models/Person"], function (exports_1, context_1) {
                 OtherController.prototype.initialize = function () {
                     var person = new Person_1.Person();
                     var em = this.getDi().get("em");
-                    em.save(person)
+                    em.save(this, person)
                         .response(function (response) {
                         console.log(response);
                     });
-                    em.findOne(Person_1.Person, {
+                    em.findOne(this, Person_1.Person, {
                         "name": "name six"
                     }).response(function (person) {
                         console.log("el six", person.getGame().getGame());
@@ -36,14 +36,14 @@ System.register(["../Models/Person"], function (exports_1, context_1) {
                             console.log(response);
                         });
                     });
-                    em.find(Person_1.Person, {
+                    em.find(this, Person_1.Person, {
                         "name": "name uno"
                     }).response(function (data) {
                         for (var key in data) {
                             console.log("name uno", data[key].getName());
                         }
                     });
-                    em.findOne(Person_1.Person, {
+                    em.findOne(this, Person_1.Person, {
                         "name": "name seven"
                     }).response(function (myModel) {
                         console.log("seven", myModel.getName());

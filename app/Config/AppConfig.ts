@@ -13,13 +13,16 @@ import { OtherView  }  from "../Views/Other/OtherView";
 
 export class AppConfig
 {
-    public static getConfig() : Object
+    public static getConfig() : Environment.Config
     {
         var config = new Environment.Config();
 
         config.setConfig(
             {
-                "baseUrl"     : "http://localhost/testgravity/",
+                "urls" : {
+                    "baseUrl"   : "http://localhost/testgravity/",
+                    "urlSample" : "http://urls/jsjs/"
+                },
                 "controllers" : [
                     {
                         "name"  : ExampleController,
@@ -35,7 +38,7 @@ export class AppConfig
                         ]
                     }
                 ],
-                "services"    : Services
+                "services" : Services
             },
             Environment.Scope.LOCAL
         );

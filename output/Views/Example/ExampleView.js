@@ -16,6 +16,7 @@ System.register([], function (exports_1, context_1) {
                     return _super.apply(this, arguments) || this;
                 }
                 ExampleView.prototype.initialize = function () {
+                    console.log(this.getVar("fromController"));
                     var div = new Html.Div();
                     div.attr("class", "btn");
                 };

@@ -194,80 +194,136 @@ var Gravity;
 ///<reference path="./Environment/Environment"/>
 (function (Gravity) {
     var Application = (function () {
+        /**
+         *
+         */
         function Application() {
-            this.controllers = new Array;
-            this.loader = null;
+            /**
+             *
+             */
             this.config = null;
+            /**
+             *
+             */
             this.env = Environment.Scope.LOCAL;
         }
+        /**
+         *
+         */
         Application.prototype.setScope = function (env) {
             this.env = env;
         };
         /**
          *
          */
-        Application.prototype.setLoader = function (loader) {
-            this.loader = loader;
-        };
-        /**
-         *
-         */
-        Application.prototype.resolveLoader = function (di) {
-            if (this.loader != null) {
-                var loader = new this.loader();
-                loader.initialize(di);
-            }
-        };
-        /**
-         *
-         */
-        Application.prototype.setControllers = function (controllers) {
-            this.controllers = controllers;
-        };
-        /**
-         *
-         */
-        Application.prototype.resolveControllers = function (di) {
-            if (this.controllers.length == 0) {
-                throw "You must load your controllers";
-            }
-            var i = 1;
-            var executed = new Array();
-            for (var key in this.controllers) {
-                var temp = new this.controllers[key];
-                if (temp instanceof Logic.Controller) {
-                    temp.setDi(di);
-                    temp.onConstruct();
-                    temp.initialize();
-                    executed[this.controllers[key]] = temp;
-                }
-                else {
-                    throw "Controller #" + i + " must be extend from Logic.Controller class";
-                }
-                i++;
-            }
-        };
-        /**
-         *
-         */
         Application.prototype.setConfig = function (config) {
-            this.config = config;
+            this.config = config.getConfig(this.env);
         };
         /**
          *
          */
         Application.prototype.resolveConfig = function (di) {
-            if (this.config) {
-                for (var key in this.config) {
-                    var url = new Url.Url();
-                    switch (key) {
-                        case "baseUrl":
-                            url.setBaseUrl(this.config[key]);
-                            break;
-                    }
-                    di.set("url", url);
+            var positionArray = new Array();
+            var configData = this.config;
+            for (var key in configData) {
+                switch (key) {
+                    case "urls":
+                        this.resolveUrl(di, configData[key]);
+                        break;
+                    case "services":
+                        this.resolveServices(di, configData[key]);
+                        break;
                 }
             }
+            //controllers executed in the final section
+            if (configData.hasOwnProperty("controllers")) {
+                this.resolveControllers(di, configData["controllers"]);
+            }
+            else {
+                throw "Config must have controllers item attached";
+            }
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveUrl = function (di, urls) {
+            var url = new Url.Url();
+            if (Array.isArray(urls)) {
+                for (var key in urls) {
+                    if (typeof urls[key] == "string") {
+                        url.set(key, urls[key]);
+                    }
+                    else {
+                        throw "Url must be string : " + urls[key];
+                    }
+                }
+            }
+            else if (typeof url == "object") {
+                var urlKey = Object.keys(urls)[0];
+                url.set(urlKey, urls[urlKey]);
+            }
+            else {
+                throw "Url data unrecognized";
+            }
+            di.set("url", url);
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveControllers = function (di, controllers) {
+            if (controllers.length == 0) {
+                throw "You must load your controllers";
+            }
+            if (Array.isArray(controllers)) {
+                var i = 1;
+                for (var key in controllers) {
+                    if (typeof controllers[key].name != "undefined") {
+                        var temp = new controllers[key].name;
+                        if (temp instanceof Logic.Controller) {
+                            temp.setDi(di);
+                            temp.onConstruct();
+                            temp.initialize();
+                            if (typeof controllers[key].views != "undefined") {
+                                this.resolveViews(temp, controllers[key].views);
+                            }
+                        }
+                        else {
+                            throw "Controller #" + i + " must be extend from Logic.Controller class";
+                        }
+                        i++;
+                    }
+                    else {
+                        throw "Config => Controller => 'name' must be initialized with Logic.Controller class";
+                    }
+                }
+            }
+            else {
+                throw "Config => controllers must be array";
+            }
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveViews = function (controller, views) {
+            if (typeof views != "undefined") {
+                if (Array.isArray(views)) {
+                    for (var key in views) {
+                        var tempView = new views[key](controller.getViewModel());
+                        if (!(tempView instanceof View.Component)) {
+                            throw "View component must be an instance of View.Component";
+                        }
+                    }
+                }
+                else {
+                    throw "Config => Controllers => views must be array";
+                }
+            }
+        };
+        /**
+         *
+         */
+        Application.prototype.resolveServices = function (di, service) {
+            new service(di);
         };
         /**
          *
@@ -275,8 +331,6 @@ var Gravity;
         Application.prototype.start = function () {
             var di = new Service.FactoryDefault;
             this.resolveConfig(di);
-            this.resolveLoader(di);
-            this.resolveControllers(di);
         };
         return Application;
     }());
@@ -758,13 +812,26 @@ var Hydrator;
     }());
     Hydrator_1.Hydrator = Hydrator;
 })(Hydrator || (Hydrator = {}));
+/// <reference path='../Definitions/promise-polyfill.d.ts' />
 var Network;
+/// <reference path='../Definitions/promise-polyfill.d.ts' />
 (function (Network) {
+    var MethodType = (function () {
+        function MethodType() {
+        }
+        return MethodType;
+    }());
+    MethodType.POST = "POST";
+    MethodType.GET = "GET";
+    MethodType.PUT = "PUT";
+    MethodType.DELETE = "DELETE";
+    Network.MethodType = MethodType;
     var Ajax = (function () {
         /**
          *
          */
         function Ajax() {
+            this.context = {};
             this.method = "POST";
             this.parameters = "";
             this.container = [];
@@ -772,6 +839,18 @@ var Network;
             this.bfSendFn = function () { }.bind(this);
             this.httpRequest = new XMLHttpRequest();
         }
+        /**
+         *
+         */
+        Ajax.prototype.setContext = function (ctx) {
+            this.context = ctx;
+        };
+        /**
+         *
+         */
+        Ajax.prototype.getContext = function () {
+            return this.context;
+        };
         /**
          *
          */
@@ -788,13 +867,13 @@ var Network;
         /**
          *
          */
-        Ajax.prototype.setContainer = function (key, value) {
+        Ajax.prototype.set = function (key, value) {
             this.container[key] = value;
         };
         /**
          *
          */
-        Ajax.prototype.getContainer = function (key) {
+        Ajax.prototype.get = function (key) {
             return this.container[key];
         };
         /**
@@ -821,14 +900,28 @@ var Network;
         /**
          *
          */
-        Ajax.prototype.post = function () {
+        Ajax.prototype.POST = function () {
             this.setMethod("POST");
             return this;
         };
         /**
          *
          */
-        Ajax.prototype.get = function () {
+        Ajax.prototype.PUT = function () {
+            this.setMethod("PUT");
+            return this;
+        };
+        /**
+         *
+         */
+        Ajax.prototype.DELETE = function () {
+            this.setMethod("DELETE");
+            return this;
+        };
+        /**
+         *
+         */
+        Ajax.prototype.GET = function () {
             this.setMethod("GET");
             return this;
         };
@@ -839,6 +932,12 @@ var Network;
             this.method = method;
             return this;
         };
+        Ajax.prototype.addContext = function () {
+            this.httpRequest.context = this.getContext();
+            this.httpRequest.getContext = function () {
+                return this.context;
+            };
+        };
         /**
          *
          */
@@ -846,6 +945,7 @@ var Network;
             this.responseFn = responseFunction;
             try {
                 this.bfSendFn();
+                this.addContext();
                 this.httpRequest.onreadystatechange = function () {
                     if (this.httpRequest.readyState === XMLHttpRequest.DONE) {
                         if (this.httpRequest.status === 200) {
@@ -922,15 +1022,17 @@ var Network;
     Network.Ajax = Ajax;
 })(Network || (Network = {}));
 /// <reference path="../Reflection/Reflection" />
-/// <reference path="./UnitOfWork" />
+/// <reference path="../Service/Service" />
 /// <reference path="../Network/Network" />
+/// <reference path="./UnitOfWork" />
 /// <reference path="../Data/Data" />
 /// <reference path="./Criteria" />
 /// <reference path="./Hydrator" />
 var Em;
 /// <reference path="../Reflection/Reflection" />
-/// <reference path="./UnitOfWork" />
+/// <reference path="../Service/Service" />
 /// <reference path="../Network/Network" />
+/// <reference path="./UnitOfWork" />
 /// <reference path="../Data/Data" />
 /// <reference path="./Criteria" />
 /// <reference path="./Hydrator" />
@@ -954,19 +1056,20 @@ var Em;
         /**
          *
          */
-        EntityManager.prototype.find = function (model, params) {
+        EntityManager.prototype.find = function (context, model, params) {
             if (params === void 0) { params = {}; }
             this.ajax = new Network.Ajax();
+            this.ajax.setContext(context);
             this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
                 .set("transactionParams", params);
-            this.ajax.setContainer("transactionType", "find");
+            this.ajax.set("transactionType", "find");
             var objModel = new model();
             var url = objModel.getFindUrl();
             if (url == null) {
-                url = this.getDi().get("url").getBaseUrl() +
+                url = this.getDi().get("url").get("baseUrl") +
                     objModel.getClassName() +
                     "/find";
             }
@@ -978,19 +1081,20 @@ var Em;
         /**
          *
          */
-        EntityManager.prototype.findOne = function (model, params) {
+        EntityManager.prototype.findOne = function (context, model, params) {
             if (params === void 0) { params = {}; }
             this.ajax = new Network.Ajax();
+            this.ajax.setContext(context);
             this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
                 .set("transactionParams", params);
-            this.ajax.setContainer("transactionType", "findOne");
+            this.ajax.set("transactionType", "findOne");
             var objModel = new model();
             var url = objModel.getFindUrl();
             if (url == null) {
-                url = this.getDi().get("url").getBaseUrl() +
+                url = this.getDi().get("url").get("baseUrl") +
                     objModel.getClassName() +
                     "/findOne";
             }
@@ -1017,20 +1121,21 @@ var Em;
         /**
          *
          */
-        EntityManager.prototype.save = function (model) {
+        EntityManager.prototype.save = function (context, model) {
             this.ajax = new Network.Ajax();
+            this.ajax.setContext(context);
             this.ajax.setDi(this.getDi());
             this.getContainer()
                 .set("transactionModel", model);
             this.getContainer()
                 .set("transactionObjectModel", model);
-            this.ajax.setContainer("transactionType", "save");
+            this.ajax.set("transactionType", "save");
             var modelName = model.getClassName();
             switch (model.state) {
                 case UnitOfWork.UnitOfWork.NEW:
                     var url = model.getInsertUrl();
                     if (url == null) {
-                        url = this.getDi().get("url").getBaseUrl() +
+                        url = this.getDi().get("url").get("baseUrl") +
                             modelName +
                             "/insert";
                     }
@@ -1039,7 +1144,7 @@ var Em;
                 case UnitOfWork.UnitOfWork.CREATED:
                     var url = model.getUpdateUrl();
                     if (url == null) {
-                        url = this.getDi().get("url").getBaseUrl() +
+                        url = this.getDi().get("url").get("baseUrl") +
                             modelName +
                             "/update";
                     }
@@ -1066,7 +1171,7 @@ var Em;
         EntityManager.prototype.response = function (fn) {
             var model = this.getContainer()
                 .get("transactionModel");
-            var type = this.ajax.getContainer("transactionType");
+            var type = this.ajax.get("transactionType");
             if (type == "find" || type == "findOne") {
                 var params = this.getContainer()
                     .get("transactionParams");
@@ -1207,14 +1312,39 @@ var Logic;
 (function (Logic) {
     var Controller = (function () {
         function Controller() {
+            this.viewModel = new View.Model();
         }
+        /**
+         *
+         */
         Controller.prototype.initialize = function () {
         };
+        /**
+         *
+         */
         Controller.prototype.onConstruct = function () {
         };
+        /**
+         *
+         */
+        Controller.prototype.setVar = function (key, value) {
+            this.viewModel.set(key, value);
+        };
+        /**
+         *
+         */
+        Controller.prototype.getViewModel = function () {
+            return this.viewModel;
+        };
+        /**
+         *
+         */
         Controller.prototype.setDi = function (di) {
             this.di = di;
         };
+        /**
+         *
+         */
         Controller.prototype.getDi = function () {
             return this.di;
         };
@@ -1222,24 +1352,17 @@ var Logic;
     }());
     Logic.Controller = Controller;
 })(Logic || (Logic = {}));
+/// <reference path="../Service/Service" />
 var Url;
+/// <reference path="../Service/Service" />
 (function (Url_1) {
-    var Url = (function () {
-        function Url(base) {
-            if (base === void 0) { base = ""; }
-            this.setBaseUrl(base);
+    var Url = (function (_super) {
+        __extends(Url, _super);
+        function Url() {
+            return _super.apply(this, arguments) || this;
         }
-        Url.prototype.get = function (opt1) {
-            return this.baseUrl + opt1;
-        };
-        Url.prototype.setBaseUrl = function (url) {
-            this.baseUrl = url;
-        };
-        Url.prototype.getBaseUrl = function () {
-            return this.baseUrl;
-        };
         return Url;
-    }());
+    }(Service.Container));
     Url_1.Url = Url;
 })(Url || (Url = {}));
 /// <reference path="../Helper/Helper" />
@@ -3170,22 +3293,46 @@ var Html;
     Html.Wbr = Wbr;
 })(Html || (Html = {}));
 /// <reference path="./Html" />
+/// <reference path="../Service/Service" />
 var View;
 /// <reference path="./Html" />
+/// <reference path="../Service/Service" />
 (function (View) {
     var Component = (function () {
-        function Component() {
+        /**
+         *
+         */
+        function Component(viewModel) {
+            this.viewModel = null;
+            this.viewModel = viewModel;
             this.initialize();
         }
+        /**
+         *
+         */
         Component.prototype.initialize = function () {
+        };
+        /**
+         *
+         */
+        Component.prototype.getViewModel = function () {
+            return this.viewModel;
+        };
+        /**
+         *
+         */
+        Component.prototype.getVar = function (key) {
+            return this.viewModel.get(key);
         };
         return Component;
     }());
     View.Component = Component;
-    var Model = (function () {
+    var Model = (function (_super) {
+        __extends(Model, _super);
         function Model() {
+            return _super.apply(this, arguments) || this;
         }
         return Model;
-    }());
+    }(Service.Container));
     View.Model = Model;
 })(View || (View = {}));

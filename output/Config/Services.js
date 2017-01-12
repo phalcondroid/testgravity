@@ -17,7 +17,8 @@ System.register(["../Library/MyCustomComponent"], function (exports_1, context_1
                 }
                 Services.prototype.initialize = function (di) {
                     di.set("custom_component", new MyCustomComponent_1.MyCustomComponent());
-                    di.set("jquery", $);
+                    //Simple example of dependency injection, you must paste the jquery.js in your html
+                    di.set("$", $);
                 };
                 return Services;
             }());

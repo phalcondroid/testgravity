@@ -1,3 +1,4 @@
+///<reference path="../../output/gravity.d.ts"/>
 System.register(["./Services", "../Controllers/ExampleController", "../Controllers/OtherController", "../Views/Example/ExampleView", "../Views/Example/HelperView", "../Views/Other/OtherView"], function (exports_1, context_1) {
     "use strict";
     var __moduleName = context_1 && context_1.id;
@@ -23,14 +24,17 @@ System.register(["./Services", "../Controllers/ExampleController", "../Controlle
                 OtherView_1 = OtherView_1_1;
             }
         ],
-        execute: function () {
+        execute: function () {///<reference path="../../output/gravity.d.ts"/>
             AppConfig = (function () {
                 function AppConfig() {
                 }
                 AppConfig.getConfig = function () {
                     var config = new Environment.Config();
                     config.setConfig({
-                        "baseUrl": "http://localhost/testgravity/",
+                        "urls": {
+                            "baseUrl": "http://localhost/testgravity/",
+                            "urlSample": "http://urls/jsjs/"
+                        },
                         "controllers": [
                             {
                                 "name": ExampleController_1.ExampleController,

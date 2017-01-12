@@ -12,17 +12,22 @@ export class ExampleController extends Logic.Controller
         var game = new Game();
         game.setGame("nuevo game");
 
+        this.setVar(
+            "fromController",
+            "test value"
+        );
+
         var person = new Person();
         person.setName("name nuevo");
         person.setLast("last nuevo");
         person.setGame(game);
 
-        em.save(person)
+        em.save(this, person)
         .response(function (response) {
             console.log(response);
         });
 
-        em.find(Person, {
+        em.find(this, Person, {
             "name" : "name one"
         }).response(function (data) {
             for (var key in data) {

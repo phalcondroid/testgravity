@@ -1,3 +1,4 @@
+/// <reference path="../../gravity/Definitions/promise-polyfill.d.ts" />
 declare namespace Data {
     class RawModel {
         state: number;
@@ -95,36 +96,46 @@ declare namespace Events {
 }
 declare namespace Gravity {
     class Application {
-        private controllers;
-        private loader;
+        /**
+         *
+         */
         private config;
+        /**
+         *
+         */
         private env;
+        /**
+         *
+         */
         constructor();
+        /**
+         *
+         */
         setScope(env: number): void;
         /**
          *
          */
-        setLoader(loader: any): void;
+        setConfig(config: Environment.Config): void;
         /**
          *
          */
-        resolveLoader(di: any): void;
+        private resolveConfig(di);
         /**
          *
          */
-        setControllers(controllers: any[]): void;
+        private resolveUrl(di, urls);
         /**
          *
          */
-        resolveControllers(di: any): void;
+        private resolveControllers(di, controllers);
         /**
          *
          */
-        setConfig(config: Object): void;
+        private resolveViews(controller, views);
         /**
          *
          */
-        resolveConfig(di: any): void;
+        private resolveServices(di, service);
         /**
          *
          */
@@ -262,9 +273,16 @@ declare namespace Hydrator {
     }
 }
 declare namespace Network {
+    class MethodType {
+        static POST: string;
+        static GET: string;
+        static PUT: string;
+        static DELETE: string;
+    }
     class Ajax implements Service.InjectionAwareInterface {
         di: Service.Container;
         private httpRequest;
+        private context;
         private method;
         private parameters;
         private error;
@@ -279,6 +297,14 @@ declare namespace Network {
         /**
          *
          */
+        setContext(ctx: Object): void;
+        /**
+         *
+         */
+        getContext(): Object;
+        /**
+         *
+         */
         setUrl(url: any): this;
         /**
          *
@@ -287,11 +313,11 @@ declare namespace Network {
         /**
          *
          */
-        setContainer(key: any, value: any): void;
+        set(key: any, value: any): void;
         /**
          *
          */
-        getContainer(key: any): any;
+        get(key: any): any;
         /**
          *
          */
@@ -299,15 +325,24 @@ declare namespace Network {
         /**
          *
          */
-        post(): this;
+        POST(): this;
         /**
          *
          */
-        get(): this;
+        PUT(): this;
+        /**
+         *
+         */
+        DELETE(): this;
+        /**
+         *
+         */
+        GET(): this;
         /**
          *
          */
         setMethod(method: string): this;
+        addContext(): void;
         /**
          *
          */
@@ -358,16 +393,16 @@ declare namespace Em {
         /**
          *
          */
-        find(model: any, params?: Object): this;
+        find(context: any, model: any, params?: Object): this;
         /**
          *
          */
-        findOne(model: any, params?: Object): this;
+        findOne(context: any, model: any, params?: Object): this;
         private getResultSet(response, params, model);
         /**
          *
          */
-        save(model: any): this;
+        save(context: any, model: any): this;
         /**
          *
          */
@@ -410,13 +445,13 @@ declare namespace Em {
     }
     interface EntityManagerInterface extends Service.InjectionAwareInterface {
         uow: Object;
-        find(model: Data.ModelAjax, params: Object): any;
-        findOne(model: Data.ModelAjax, params: Object): any;
-        count(model: Data.ModelAjax, params: Object): any;
-        distinct(model: Data.ModelAjax, params: Object): any;
-        group(model: Data.ModelAjax, params: Object): any;
-        save(model: Data.ModelAjax): any;
-        delete(model: Data.ModelAjax): any;
+        find(conext: any, model: Data.ModelAjax, params: Object): any;
+        findOne(context: any, model: Data.ModelAjax, params: Object): any;
+        count(context: any, model: Data.ModelAjax, params: Object): any;
+        distinct(context: any, model: Data.ModelAjax, params: Object): any;
+        group(context: any, model: Data.ModelAjax, params: Object): any;
+        save(context: any, model: Data.ModelAjax): any;
+        delete(context: any, model: Data.ModelAjax): any;
         forget(): any;
         flush(): any;
         purge(): any;
@@ -444,22 +479,37 @@ declare namespace Service {
 declare namespace Logic {
     class Controller implements Service.InjectionAwareInterface {
         di: Service.Container;
-        constructor();
+        private viewModel;
+        /**
+         *
+         */
         initialize(): void;
+        /**
+         *
+         */
         onConstruct(): void;
+        /**
+         *
+         */
+        setVar(key: any, value: any): void;
+        /**
+         *
+         */
+        getViewModel(): View.Model;
+        /**
+         *
+         */
         setDi(di: Service.Container): void;
+        /**
+         *
+         */
         getDi(): Service.Container;
     }
 }
 declare namespace Eval {
 }
 declare namespace Url {
-    class Url {
-        private baseUrl;
-        constructor(base?: string);
-        get(opt1: string): string;
-        setBaseUrl(url: string): void;
-        getBaseUrl(): string;
+    class Url extends Service.Container {
     }
 }
 /**
@@ -1362,9 +1412,24 @@ declare namespace Html {
 }
 declare namespace View {
     class Component {
-        constructor();
+        private viewModel;
+        /**
+         *
+         */
+        constructor(viewModel: View.Model);
+        /**
+         *
+         */
         initialize(): void;
+        /**
+         *
+         */
+        getViewModel(): View.Model;
+        /**
+         *
+         */
+        getVar(key: any): any;
     }
-    class Model {
+    class Model extends Service.Container {
     }
 }

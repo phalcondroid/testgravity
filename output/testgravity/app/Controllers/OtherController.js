@@ -1,4 +1,3 @@
-///<reference path="../../output/gravity.d.ts"/>
 System.register(["../Models/Person"], function (exports_1, context_1) {
     "use strict";
     var __extends = (this && this.__extends) || function (d, b) {
@@ -7,27 +6,27 @@ System.register(["../Models/Person"], function (exports_1, context_1) {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
     var __moduleName = context_1 && context_1.id;
-    var Person_1, Controller2;
+    var Person_1, OtherController;
     return {
         setters: [
             function (Person_1_1) {
                 Person_1 = Person_1_1;
             }
         ],
-        execute: function () {///<reference path="../../output/gravity.d.ts"/>
-            Controller2 = (function (_super) {
-                __extends(Controller2, _super);
-                function Controller2() {
+        execute: function () {
+            OtherController = (function (_super) {
+                __extends(OtherController, _super);
+                function OtherController() {
                     return _super.apply(this, arguments) || this;
                 }
-                Controller2.prototype.initialize = function () {
+                OtherController.prototype.initialize = function () {
                     var person = new Person_1.Person();
                     var em = this.getDi().get("em");
-                    em.save(person)
+                    em.save(this, person)
                         .response(function (response) {
                         console.log(response);
                     });
-                    em.findOne(Person_1.Person, {
+                    em.findOne(this, Person_1.Person, {
                         "name": "name six"
                     }).response(function (person) {
                         console.log("el six", person.getGame().getGame());
@@ -36,22 +35,22 @@ System.register(["../Models/Person"], function (exports_1, context_1) {
                             console.log(response);
                         });
                     });
-                    em.find(Person_1.Person, {
+                    em.find(this, Person_1.Person, {
                         "name": "name uno"
                     }).response(function (data) {
                         for (var key in data) {
                             console.log("name uno", data[key].getName());
                         }
                     });
-                    em.findOne(Person_1.Person, {
+                    em.findOne(this, Person_1.Person, {
                         "name": "name seven"
                     }).response(function (myModel) {
                         console.log("seven", myModel.getName());
                     });
                 };
-                return Controller2;
+                return OtherController;
             }(Logic.Controller));
-            exports_1("Controller2", Controller2);
+            exports_1("OtherController", OtherController);
         }
     };
 });

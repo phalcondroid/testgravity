@@ -11,6 +11,7 @@ export class Services implements Loader.DiConstructorInjection
             "custom_component",
             new MyCustomComponent()
         );
-        di.set("jquery", $);
+        //Simple example of dependency injection, you must paste the jquery.js in your html
+        di.set("$", $);
     }
 }
